@@ -31,62 +31,65 @@
 /** sets up the problem data */
 extern
 SCIP_RETCODE SCIPprobdataCreate(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const char*           probname,           /**< problem name */
-   int*                  ids,                /**< array of item ids */
-   SCIP_Longint*         weights,            /**< array containing the item weights */
-   int                   nitems,             /**< number of items */
-   SCIP_Longint          capacity            /**< bin capacity */
-   );
+        SCIP* scip, /**< SCIP data structure */
+        const char* probname, /**< problem name */
+        int* ids, /**< array of item ids */
+        SCIP_Longint* weights, /**< array containing the item weights */
+        SCIP_Longint* values, /** array containing the item values */
+        int nitems, /**< number of items */
+        int* binids, /**< array of bin ids */
+        SCIP_Longint* capacities, /**< bin capacities */
+        int nbins /**< number of bins */
+        );
 
 /** returns array of item ids */
 extern
 int* SCIPprobdataGetIds(
-   SCIP_PROBDATA*        probdata            /**< problem data */
-   );
+        SCIP_PROBDATA* probdata /**< problem data */
+        );
 
 /** returns array of item weights */
 extern
 SCIP_Longint* SCIPprobdataGetWeights(
-   SCIP_PROBDATA*        probdata            /**< problem data */
-   );
+        SCIP_PROBDATA* probdata /**< problem data */
+        );
 
 /** returns number of items */
 extern
 int SCIPprobdataGetNItems(
-   SCIP_PROBDATA*        probdata            /**< problem data */
-   );
+        SCIP_PROBDATA* probdata /**< problem data */
+        );
 
 /** returns bin capacity */
 extern
 SCIP_Longint SCIPprobdataGetCapacity(
-   SCIP_PROBDATA*        probdata            /**< problem data */
-   );
+        SCIP_PROBDATA* probdata /**< problem data */
+        );
 
 /** returns array of all variables ordered in the way they got generated */
 extern
 SCIP_VAR** SCIPprobdataGetVars(
-   SCIP_PROBDATA*        probdata            /**< problem data */
-   );
+        SCIP_PROBDATA* probdata /**< problem data */
+        );
 
 /** returns number of variables */
 extern
 int SCIPprobdataGetNVars(
-   SCIP_PROBDATA*        probdata            /**< problem data */
-   );
+        SCIP_PROBDATA* probdata /**< problem data */
+        );
 
 /** returns array of set partitioning constrains */
 extern
 SCIP_CONS** SCIPprobdataGetConss(
-   SCIP_PROBDATA*        probdata            /**< problem data */
-   );
+        SCIP_PROBDATA* probdata /**< problem data */
+        );
 
 /** adds given variable to the problem data */
 extern
 SCIP_RETCODE SCIPprobdataAddVar(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PROBDATA*        probdata,           /**< problem data */
-   SCIP_VAR*             var                 /**< variables to add */
-   );
+        SCIP* scip, /**< SCIP data structure */
+        SCIP_PROBDATA* probdata, /**< problem data */
+        SCIP_VAR* var /**< variables to add */
+        );
 
 #endif

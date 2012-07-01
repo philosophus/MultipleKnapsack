@@ -101,134 +101,157 @@
 
 /** problem reading method of reader */
 static
-SCIP_DECL_READERREAD(readerReadBpa)
-{  /*lint --e{715}*/
-   SCIP_FILE* file;
-   SCIP_Longint* weights;
-   SCIP_Longint* values;
-   SCIP_Longint* capacities;
-   int* ids;
-   SCIP_Bool error;
+SCIP_DECL_READERREAD(readerReadBpa) { /*lint --e{715}*/
+    SCIP_FILE* file;
+    SCIP_Longint* weights;
+    SCIP_Longint* values;
+    SCIP_Longint* capacities;
+    int* binids;
+    int* ids;
+    SCIP_Bool error;
 
-   char name[SCIP_MAXSTRLEN];
-   char format[16];
-   char buffer[SCIP_MAXSTRLEN];
-   int nitems;
-   int nbins;
-   int bestsolvalue;
-   int nread;
-   int weight;
-   int nweights;
-   int lineno;
+    char name[SCIP_MAXSTRLEN];
+    char format[16];
+    char buffer[SCIP_MAXSTRLEN];
+    int nitems;
+    int nbins;
+    int bestsolvalue;
+    int nread;
+    int weight;
+    int nweights;
+    int value;
+    int capacity;
+    int ncapacities;
+    int lineno;
 
-   *result = SCIP_DIDNOTRUN;
+    *result = SCIP_DIDNOTRUN;
 
-   /* open file */
-   file = SCIPfopen(filename, "r");
-   if( file == NULL )
-   {
-      SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
-      SCIPprintSysError(filename);
-      return SCIP_NOFILE;
-   }
+    /* open file */
+    file = SCIPfopen(filename, "r");
+    if (file == NULL) {
+        SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
+        SCIPprintSysError(filename);
+        return SCIP_NOFILE;
+    }
 
-   lineno = 0;
+    lineno = 0;
 
-   /* read problem name */
-   if( !SCIPfeof(file) )
-   {
-      /* get next line */
-      if( SCIPfgets(buffer, sizeof(buffer), file) == NULL )
-         return SCIP_READERROR;
-      lineno++;
+    /* read problem name */
+    if (!SCIPfeof(file)) {
+        /* get next line */
+        if (SCIPfgets(buffer, sizeof (buffer), file) == NULL)
+            return SCIP_READERROR;
+        lineno++;
 
-      /* parse dimension line */
-      sprintf(format, "%%%ds\n", SCIP_MAXSTRLEN);
-      nread = sscanf(buffer, format, name);
-      if( nread == 0 )
-      {
-         SCIPwarningMessage("invalid input line %d in file <%s>: <%s>\n", lineno, filename, buffer);
-         return SCIP_READERROR;
-      }
+        /* parse dimension line */
+        sprintf(format, "%%%ds\n", SCIP_MAXSTRLEN);
+        nread = sscanf(buffer, format, name);
+        if (nread == 0) {
+            SCIPwarningMessage("invalid input line %d in file <%s>: <%s>\n", lineno, filename, buffer);
+            return SCIP_READERROR;
+        }
 
-      SCIPdebugMessage("problem name <%s>\n", name);
-   }
-   
-   /* read problem dimension */
-   if( !SCIPfeof(file) )
-   {
-      /* get next line */
-      if( SCIPfgets(buffer, sizeof(buffer), file) == NULL )
-         return SCIP_READERROR;
-      lineno++;
+        SCIPdebugMessage("problem name <%s>\n", name);
+    }
 
-      /* parse dimension line */
-      nread = sscanf(buffer, "%d %d %d\n", &nbins, &nitems, &bestsolvalue);
-      if( nread < 2 )
-      {
-         SCIPwarningMessage("invalid input line %d in file <%s>: <%s>\n", lineno, filename, buffer);
-         return SCIP_READERROR;
-      }
+    /* read problem dimension */
+    if (!SCIPfeof(file)) {
+        /* get next line */
+        if (SCIPfgets(buffer, sizeof (buffer), file) == NULL)
+            return SCIP_READERROR;
+        lineno++;
 
-      SCIPdebugMessage("number of bins = <%d>, number of items = <%d>, best known solution = <%d>\n", nbins, nitems, bestsolvalue);
-   }
-   
+        /* parse dimension line */
+        nread = sscanf(buffer, "%d %d %d\n", &nbins, &nitems, &bestsolvalue);
+        if (nread < 2) {
+            SCIPwarningMessage("invalid input line %d in file <%s>: <%s>\n", lineno, filename, buffer);
+            return SCIP_READERROR;
+        }
 
-   /* allocate buffer memory for storing the weights and ids temporary */
-   SCIP_CALL( SCIPallocBufferArray(scip, &weights, nitems) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &ids, nitems) );
-   
-   /* pasre weights */
-   nweights = 0;
-   error = FALSE;
-   
-   while( !SCIPfeof(file) && !error )
-   {
-      /* get next line */
-      if( SCIPfgets(buffer, sizeof(buffer), file) == NULL )
-         break;
-      lineno++;
+        SCIPdebugMessage("number of bins = <%d>, number of items = <%d>, best known solution = <%d>\n", nbins, nitems, bestsolvalue);
+    }
 
-      /* parse the line */
-      nread = sscanf(buffer, "%d\n", &weight);
-      if( nread == 0 )
-      {
-         SCIPwarningMessage("invalid input line %d in file <%s>: <%s>\n", lineno, filename, buffer);
-         error = TRUE;
-         break;
-      }
 
-      SCIPdebugMessage("found weight %d <%d>\n", nweights, weight);
-      weights[nweights] = weight;
-      ids[nweights] = nweights;
-      nweights++;
+    /* allocate buffer memory for storing the weights, ids and capacities temporary */
+    SCIP_CALL(SCIPallocBufferArray(scip, &weights, nitems));
+    SCIP_CALL(SCIPallocBufferArray(scip, &ids, nitems));
+    SCIP_CALL(SCIPallocBufferArray(scip, &values, nitems));
+    SCIP_CALL(SCIPallocBufferArray(scip, &capacities, nbins));
+    SCIP_CALL(SCIPallocBufferArray(scip, &binids, nbins));
 
-      if( nweights == nitems )
-         break;
-   }
+    /* parse bins */
+    ncapacities = 0;
+    error = FALSE;
 
-   if( nweights < nitems )
-   {
-      SCIPwarningMessage("set nitems from <%d> to <%d> since the file <%s> only contains <%d> weights\n", nitems, weights, filename, weights);
-      nitems = nweights;
-   }
-   
-   if( !error )
-   {
-      /* create a new problem in SCIP */  
-      SCIP_CALL( SCIPprobdataCreate(scip, name, ids, weights, nitems, (SCIP_Longint)capacity) );
-   }
+    while (!SCIPfeof(file) && !error) {
+        /* get next line */
+        if (SCIPfgets(buffer, sizeof (buffer), file) == NULL)
+            break;
+        lineno++;
+        nread = scanf(buffer, "%d\n", &capacity);
+        if (nread == 0) {
+            SCIPwarningMessage("invalid input line %d in file <%s>: <%s>\n", lineno, filename, buffer);
+            error = TRUE;
+            break;
+        }
+        
+        SCIPdebugMessage("found capacity %d <%d> \n", ncapacities, capacity);
+        capacities[ncapacities] = capacity;
+        binids[ncapacities] = ncapacities;
+        ++ncapacities;
+        
+        if (ncapacities == nbins)
+            break;
+    }
 
-   (void)SCIPfclose(file);
-   SCIPfreeBufferArray(scip, &ids);
-   SCIPfreeBufferArray(scip, &weights);
+    /* parse weights */
+    nweights = 0;
+    error = FALSE;
 
-   if( error )
-      return SCIP_READERROR;
-   
-   *result = SCIP_SUCCESS;
+    while (!SCIPfeof(file) && !error) {
+        /* get next line */
+        if (SCIPfgets(buffer, sizeof (buffer), file) == NULL)
+            break;
+        lineno++;
 
-   return SCIP_OKAY;
+        /* parse the line */
+        nread = sscanf(buffer, "%d %d\n", &weight, &value);
+        if (nread < 2) {
+            SCIPwarningMessage("invalid input line %d in file <%s>: <%s>\n", lineno, filename, buffer);
+            error = TRUE;
+            break;
+        }
+
+        SCIPdebugMessage("found weight and value  %d <%d,%d>\n", nweights, weight, value);
+        weights[nweights] = weight;
+        ids[nweights] = nweights;
+        values[nweights] = value;
+        nweights++;
+
+        if (nweights == nitems)
+            break;
+    }
+
+    if (nweights < nitems) {
+        SCIPwarningMessage("set nitems from <%d> to <%d> since the file <%s> only contains <%d> weights\n", nitems, weights, filename, weights);
+        nitems = nweights;
+    }
+
+    if (!error) {
+        /* create a new problem in SCIP */
+        SCIP_CALL(SCIPprobdataCreate(scip, name, ids, weights, values, nitems, binids, capacities, nbins));
+    }
+
+    (void) SCIPfclose(file);
+    SCIPfreeBufferArray(scip, &ids);
+    SCIPfreeBufferArray(scip, &weights);
+
+    if (error)
+        return SCIP_READERROR;
+
+    *result = SCIP_SUCCESS;
+
+    return SCIP_OKAY;
 }
 
 #define readerWriteBpa NULL
@@ -240,17 +263,16 @@ SCIP_DECL_READERREAD(readerReadBpa)
 
 /** includes the bpa file reader in SCIP */
 SCIP_RETCODE SCIPincludeReaderBpa(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_READERDATA* readerdata;
+        SCIP* scip /**< SCIP data structure */
+        ) {
+    SCIP_READERDATA* readerdata;
 
-   /* create binpacking reader data */
-   readerdata = NULL;
-   
-   /* include binpacking reader */
-   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerCopyBpa, readerFreeBpa, readerReadBpa, readerWriteBpa, readerdata) );
-   
-   return SCIP_OKAY;
+    /* create binpacking reader data */
+    readerdata = NULL;
+
+    /* include binpacking reader */
+    SCIP_CALL(SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
+            readerCopyBpa, readerFreeBpa, readerReadBpa, readerWriteBpa, readerdata));
+
+    return SCIP_OKAY;
 }
