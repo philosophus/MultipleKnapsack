@@ -54,15 +54,21 @@ SCIP_Longint* SCIPprobdataGetWeights(
         SCIP_PROBDATA* probdata /**< problem data */
         );
 
+/** returns array of item values */
+extern
+SCIP_Longint* SCIPprobdataGetValues(
+        SCIP_PROBDATA* probdata /**< problem data */
+        );
+
 /** returns number of items */
 extern
 int SCIPprobdataGetNItems(
         SCIP_PROBDATA* probdata /**< problem data */
         );
 
-/** returns bin capacity */
+/** returns array of bin capacities */
 extern
-SCIP_Longint SCIPprobdataGetCapacity(
+SCIP_Longint* SCIPprobdataGetCapacities(
         SCIP_PROBDATA* probdata /**< problem data */
         );
 
@@ -75,6 +81,12 @@ SCIP_VAR** SCIPprobdataGetVars(
 /** returns number of variables */
 extern
 int SCIPprobdataGetNVars(
+        SCIP_PROBDATA* probdata /**< problem data */
+        );
+
+/** returns number of bins */
+extern
+int SCIPprobdataGetNBins(
         SCIP_PROBDATA* probdata /**< problem data */
         );
 

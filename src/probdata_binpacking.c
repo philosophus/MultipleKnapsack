@@ -66,6 +66,7 @@
 #include "pricer_binpacking.h"
 
 #include "scip/cons_setppc.h"
+#include "scip/cons_linear.h"
 #include "scip/scip.h"
 
 /** @brief Problem data which is accessible in all places
@@ -112,7 +113,7 @@ SCIP_DECL_EVENTEXEC(eventExecAddedVar) { /*lint --e{715}*/
 
 
 /*
- * local methods 
+ * local methods
  */
 
 /** creates problem data */
@@ -127,7 +128,7 @@ SCIP_RETCODE probdataCreate(
         int* ids, /**< array of item ids */
         int nvars, /**< number of variables */
         int nitems, /**< number of items */
-        SCIP_Longint* capacities,/**< bin capacities */
+        SCIP_Longint* capacities, /**< bin capacities */
         int* binids, /**< array of bin ids */
         int nbins /**< number of bins */
         ) {
@@ -144,7 +145,7 @@ SCIP_RETCODE probdataCreate(
         (*probdata)->vars = NULL;
 
     /* duplicate arrays */
-    SCIP_CALL(SCIPduplicateMemoryArray(scip, &(*probdata)->conss, conss, nitems));
+    SCIP_CALL(SCIPduplicateMemoryArray(scip, &(*probdata)->conss, conss, nitems + nbins));
     SCIP_CALL(SCIPduplicateMemoryArray(scip, &(*probdata)->weights, weights, nitems));
     SCIP_CALL(SCIPduplicateMemoryArray(scip, &(*probdata)->values, values, nitems));
     SCIP_CALL(SCIPduplicateMemoryArray(scip, &(*probdata)->ids, ids, nitems));
@@ -217,6 +218,7 @@ SCIP_RETCODE createInitialColumns(
     weights = probdata->weights;
     nitems = probdata->nitems;
 
+    // TODO
     /* create start solution each item in exactly one bin */
     for (i = 0; i < nitems; ++i) {
         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "item_%d", ids[i]);
@@ -242,10 +244,10 @@ SCIP_RETCODE createInitialColumns(
         /* add the variable data to the variable */
         SCIPvarSetData(var, vardata);
 
-        /* change the upper bound of the binary variable to lazy since the upper bound is already enforced 
+        /* change the upper bound of the binary variable to lazy since the upper bound is already enforced
          * due to the objective function the set covering constraint;
          * The reason for doing is that, is to avoid the bound of x <= 1 in the LP relaxation since this bound
-         * constraint would produce a dual variable which might have a positive reduced cost 
+         * constraint would produce a dual variable which might have a positive reduced cost
          */
         SCIP_CALL(SCIPchgVarUbLazy(scip, var, 1.0));
 
@@ -275,11 +277,11 @@ SCIP_DECL_PROBDELORIG(probdelorigBinpacking) {
 static
 SCIP_DECL_PROBTRANS(probtransBinpacking) {
     /* create transform probdata */
-    SCIP_CALL(probdataCreate(scip, targetdata, sourcedata->vars, sourcedata->conss, sourcedata->weights, sourcedata->ids,
-            sourcedata->nvars, sourcedata->nitems, sourcedata->capacity));
+    SCIP_CALL(probdataCreate(scip, targetdata, sourcedata->vars, sourcedata->conss, sourcedata->weights, sourcedata->values, sourcedata->ids,
+            sourcedata->nvars, sourcedata->nitems, sourcedata->capacities, sourcedata->binids, sourcedata->nbins));
 
     /* transform all constraints */
-    SCIP_CALL(SCIPtransformConss(scip, (*targetdata)->nitems, (*targetdata)->conss, (*targetdata)->conss));
+    SCIP_CALL(SCIPtransformConss(scip, (*targetdata)->nitems + (*targetdata)->nbins, (*targetdata)->conss, (*targetdata)->conss));
 
     /* transform all variables */
     SCIP_CALL(SCIPtransformVars(scip, (*targetdata)->nvars, (*targetdata)->vars, (*targetdata)->vars));
@@ -353,6 +355,9 @@ SCIP_RETCODE SCIPprobdataCreate(
     SCIP_CONS** conss;
     char name[SCIP_MAXSTRLEN];
     int i;
+    int matchPartners;
+    SCIP_Longint lastBinSize;
+    int equallySized;
 
     assert(scip != NULL);
 
@@ -372,15 +377,35 @@ SCIP_RETCODE SCIPprobdataCreate(
     /* tell SCIP that the objective will be always integral */
     SCIP_CALL(SCIPsetObjIntegral(scip));
 
-    SCIP_CALL(SCIPallocBufferArray(scip, &conss, nitems));
+    SCIP_CALL(SCIPallocBufferArray(scip, &conss, nitems + nbins));
 
-    /* create set covering constraints for each item */
+    /* create set packing constraints for each item */
     for (i = 0; i < nitems; ++i) {
         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "item_%d", ids[i]);
 
-        SCIP_CALL(SCIPcreateConsSetcover(scip, &conss[i], name,
+        SCIP_CALL(SCIPcreateConsSetpack(scip, &conss[i], name,
                 0, NULL, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE));
         SCIP_CALL(SCIPaddCons(scip, conss[i]));
+    }
+
+    /* create Hall constraints for each bin */
+    matchPartners = nbins;
+    lastBinSize = 0;
+    equallySized = 0;
+    for (i = 0; i < nbins; ++i) {
+        (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "bin_%d", binids[i]);
+
+        if (lastBinSize == capacities[i]) {
+            ++equallySized;
+        } else {
+            matchPartners -= equallySized;
+            equallySized = 1;
+            lastBinSize = capacities[i];
+        }
+
+        SCIP_CALL(SCIPcreateConsLinear(scip, &conss[nitems+i], name,
+                0, NULL, NULL, -SCIPinfinity(scip), matchPartners, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE));
+        SCIP_CALL(SCIPaddCons(scip, conss[nitems+i]));
     }
 
     /* create problem data */
@@ -413,6 +438,13 @@ SCIP_Longint* SCIPprobdataGetWeights(
     return probdata->weights;
 }
 
+/** returns array of item values */
+SCIP_Longint* SCIPprobdataGetValues(
+        SCIP_PROBDATA* probdata /**< problem data */
+        ) {
+    return probdata->values;
+}
+
 /** returns number of items */
 int SCIPprobdataGetNItems(
         SCIP_PROBDATA* probdata /**< problem data */
@@ -420,11 +452,18 @@ int SCIPprobdataGetNItems(
     return probdata->nitems;
 }
 
-/** returns bin capacity */
-SCIP_Longint SCIPprobdataGetCapacity(
+/** returns array of bin capacities */
+SCIP_Longint* SCIPprobdataGetCapacity(
         SCIP_PROBDATA* probdata /**< problem data */
         ) {
-    return probdata->capacity;
+    return probdata->capacities;
+}
+
+/** returns number of bins */
+int SCIPprobdataGetNBins(
+        SCIP_PROBDATA* probdata /**< problem data */
+        ) {
+    return probdata->nbins;
 }
 
 /** returns array of all variables itemed in the way they got generated */
@@ -460,7 +499,7 @@ SCIP_RETCODE SCIPprobdataAddVar(
         SCIP_CALL(SCIPreallocMemoryArray(scip, &probdata->vars, probdata->varssize));
     }
 
-    /* caputure variables */
+    /* capture variables */
     SCIP_CALL(SCIPcaptureVar(scip, var));
 
     probdata->vars[probdata->nvars] = var;

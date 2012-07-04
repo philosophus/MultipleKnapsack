@@ -49,14 +49,14 @@ SCIP_RETCODE vardataCreate(
    int*                  consids,            /**< array of constraints ids */
    int                   nconsids            /**< number of constraints */
    )
-{ 
+{
    SCIP_CALL( SCIPallocBlockMemory(scip, vardata) );
 
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*vardata)->consids, consids, nconsids) );
    SCIPsortInt((*vardata)->consids, nconsids);
-   
+
    (*vardata)->nconsids = nconsids;
-   
+
    return SCIP_OKAY;
 }
 
@@ -69,12 +69,12 @@ SCIP_RETCODE vardataDelete(
 {
    SCIPfreeBlockMemoryArray(scip, &(*vardata)->consids, (*vardata)->nconsids);
    SCIPfreeBlockMemory(scip, vardata);
-   
+
    return SCIP_OKAY;
 }
 
 /** frees user data of original variable (called when the original variable is freed) */
-static 
+static
 SCIP_DECL_VARDELORIG(vardataDelOrig)
 {
    SCIP_CALL( vardataDelete(scip, vardata) );
@@ -96,7 +96,7 @@ static
 SCIP_DECL_VARDELTRANS(vardataDelTrans)
 {
    SCIP_CALL( vardataDelete(scip, vardata) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -132,12 +132,12 @@ int* SCIPvardataGetConsids(
 #ifndef NDEBUG
    {
       int i;
-      
+
       for( i = 1; i < vardata->nconsids; ++i )
          assert( vardata->consids[i-1] < vardata->consids[i]);
    }
 #endif
-   
+
    return vardata->consids;
 }
 
@@ -157,7 +157,7 @@ SCIP_RETCODE SCIPcreateVarBinpacking(
          initial, removable, vardataDelOrig, vardataTrans, vardataDelTrans, vardataCopy, vardata) );
 
    SCIPvarMarkDeletable(*var);
-   
+
    SCIPdebug(SCIPprintVar(scip, *var, NULL) );
 
    return SCIP_OKAY;
@@ -177,19 +177,19 @@ void SCIPvardataPrint(
 
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
-   
+
    ids = SCIPprobdataGetIds(probdata);
    assert(ids != NULL);
 
    SCIPinfoMessage(scip, file, "consids = {");
-   
+
    for( i = 0; i < vardata->nconsids; ++i )
    {
       SCIPinfoMessage(scip, file, "%d->%d", ids[vardata->consids[i]], vardata->consids[i]);
-      
+
       if( i < vardata->nconsids - 1 )
          SCIPinfoMessage(scip, file, ",");
    }
-   
+
    SCIPinfoMessage(scip, file, "}\n");
-}   
+}
