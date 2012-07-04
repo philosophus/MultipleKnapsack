@@ -411,7 +411,7 @@ SCIP_RETCODE SCIPprobdataCreate(
     /* create problem data */
     SCIP_CALL(probdataCreate(scip, &probdata, NULL, conss, weights, values, ids, 0, nitems, capacities, binids, nbins));
 
-    SCIP_CALL(createInitialColumns(scip, probdata));
+    //SCIP_CALL(createInitialColumns(scip, probdata));
 
     /* set user problem data */
     SCIP_CALL(SCIPsetProbData(scip, probdata));
@@ -453,7 +453,7 @@ int SCIPprobdataGetNItems(
 }
 
 /** returns array of bin capacities */
-SCIP_Longint* SCIPprobdataGetCapacity(
+SCIP_Longint* SCIPprobdataGetCapacities(
         SCIP_PROBDATA* probdata /**< problem data */
         ) {
     return probdata->capacities;

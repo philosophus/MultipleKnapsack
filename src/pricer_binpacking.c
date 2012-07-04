@@ -734,7 +734,7 @@ SCIP_RETCODE SCIPpricerBinpackingActivate(
     assert(pricerdata != NULL);
 
     /* copy arrays */
-    SCIP_CALL(SCIPduplicateMemoryArray(scip, &pricerdata->conss, conss, nitems));
+    SCIP_CALL(SCIPduplicateMemoryArray(scip, &pricerdata->conss, conss, nitems+nbins));
     SCIP_CALL(SCIPduplicateMemoryArray(scip, &pricerdata->weights, weights, nitems));
     SCIP_CALL(SCIPduplicateMemoryArray(scip, &pricerdata->values, values, nitems));
     SCIP_CALL(SCIPduplicateMemoryArray(scip, &pricerdata->ids, ids, nitems));
@@ -751,6 +751,9 @@ SCIP_RETCODE SCIPpricerBinpackingActivate(
     for (c = 0; c < nitems; ++c) {
         SCIP_CALL(SCIPcaptureCons(scip, conss[c]));
         SCIPdebugPrintf("%4d %3"SCIP_LONGINT_FORMAT"\n", c, weights[c]);
+    }
+    for (c = 0; c < nbins; ++c) {
+        SCIP_CALL(SCIPcaptureCons(scip, conss[nitems+c]));
     }
 
     /* activate pricer */

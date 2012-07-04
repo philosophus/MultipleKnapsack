@@ -22,7 +22,7 @@
 # path 
 #-----------------------------------------------------------------------------
 
-SCIPDIR         =       /opt/ziboptsuite-2.1.1/scip-2.1.1/
+SCIPDIR         =       /opt/ziboptsuite-2.1.0/scip-2.1.0/
 
 #-----------------------------------------------------------------------------
 # include default project Makefile from SCIP

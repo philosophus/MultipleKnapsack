@@ -65,7 +65,7 @@
  * therein for more details.
  *
  * @subsection CREATING Creating the problem
- * 
+ *
  * After parsing the file the final task for the reader is to create the problem. In our case we pass the collected data
  * to main problem data plugin. Therefore, we use the interface methods SCIPprobdataCreate() which is provided by the
  * problem data plugin (see probdata_binpacking.c). After that the reader set the result value for the SCIP_RESULT
@@ -84,9 +84,9 @@
 #include "probdata_binpacking.h"
 #include "reader_bpa.h"
 
-#define READER_NAME             "bpareader"
+#define READER_NAME             "abpareader"
 #define READER_DESC             "file reader for binpacking data format"
-#define READER_EXTENSION        "bpa"
+#define READER_EXTENSION        "abpa"
 
 
 /*
@@ -188,18 +188,18 @@ SCIP_DECL_READERREAD(readerReadBpa) { /*lint --e{715}*/
         if (SCIPfgets(buffer, sizeof (buffer), file) == NULL)
             break;
         lineno++;
-        nread = scanf(buffer, "%d\n", &capacity);
+        nread = sscanf(buffer, "%d\n", &capacity);
         if (nread == 0) {
             SCIPwarningMessage("invalid input line %d in file <%s>: <%s>\n", lineno, filename, buffer);
             error = TRUE;
             break;
         }
-        
+
         SCIPdebugMessage("found capacity %d <%d> \n", ncapacities, capacity);
         capacities[ncapacities] = capacity;
         binids[ncapacities] = ncapacities;
         ++ncapacities;
-        
+
         if (ncapacities == nbins)
             break;
     }

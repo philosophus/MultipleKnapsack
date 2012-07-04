@@ -1,9 +1,11 @@
-/* 
+/*
  * File:   main.cpp
  * Author: florian
  *
  * Created on June 29, 2012, 3:42 PM
  */
+
+#define SCIP_DEBUG
 
 #include <cstdlib>
 
@@ -21,7 +23,7 @@ extern "C" {
 #include "cons_samediff.h"
 #include "pricer_binpacking.h"
 #include "reader_bpa.h"
-    
+
 }
 
 using namespace std;
@@ -44,26 +46,26 @@ SCIP_RETCODE runShell(
 
    /* initialize SCIP */
    SCIP_CALL( SCIPcreate(&scip) );
-   
+
    /* include binpacking reader */
    SCIP_CALL( SCIPincludeReaderBpa(scip) );
 
    /* include binpacking branching and branching data */
    SCIP_CALL( SCIPincludeBranchruleRyanFoster(scip) );
    SCIP_CALL( SCIPincludeConshdlrSamediff(scip) );
-   
+
   /* include binpacking pricer  */
    SCIP_CALL( SCIPincludePricerBinpacking(scip) );
 
    /* include default SCIP plugins */
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
- 
+
    /* for column generation instances, disable restarts */
    SCIP_CALL( SCIPsetIntParam(scip,"presolving/maxrestarts",0) );
 
    /* turn off all separation algorithms */
    SCIP_CALL( SCIPsetSeparating(scip, SCIP_PARAMSETTING_OFF, TRUE) );
-   
+
    /**********************************
     * Process command line arguments *
     **********************************/
@@ -82,7 +84,7 @@ SCIP_RETCODE runShell(
 
 
 /*
- * 
+ *
  */
 int main(int argc, char** argv) {
    SCIP_RETCODE retcode;
