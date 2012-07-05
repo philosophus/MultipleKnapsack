@@ -245,6 +245,9 @@ SCIP_DECL_READERREAD(readerReadBpa) { /*lint --e{715}*/
     (void) SCIPfclose(file);
     SCIPfreeBufferArray(scip, &ids);
     SCIPfreeBufferArray(scip, &weights);
+    SCIPfreeBufferArray(scip, &values);
+    SCIPfreeBufferArray(scip, &binids);
+    SCIPfreeBufferArray(scip, &capacities);
 
     if (error)
         return SCIP_READERROR;

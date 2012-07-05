@@ -56,8 +56,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 
-#define SCIP_DEBUG
-
 #include <assert.h>
 #include <string.h>
 
@@ -336,20 +334,21 @@ SCIP_RETCODE initPricing(
          * interest since the corresponding job is assigned to a packing
          */
         if (!SCIPconsIsEnabled(cons)) {
-            SCIPwarningMessage("TROUBLE!");
+//            SCIPwarningMessage("TROUBLE!");
             continue;
         }
 
         if (SCIPgetNFixedonesSetppc(scip, cons) == 1) {
             /* disable constraint locally */
             SCIP_CALL(SCIPdelConsLocal(scip, cons));
-            SCIPwarningMessage("TROUBLE!");
+//            SCIPwarningMessage("TROUBLE!");
             continue;
         }
 
         /* dual value in original SCIP */
-        dual = SCIPgetDualsolSetppc(scip, cons);
-        assert(dual >= 0);
+        dual = -SCIPgetDualsolSetppc(scip, cons);
+        //assert(dual >= 0);
+        // TODO: Edit when correct objsense
 
         SCIP_CALL(SCIPcreateVar(subscip, &var, SCIPconsGetName(cons), 0.0, 1.0, values[c]-dual,
                 SCIP_VARTYPE_BINARY, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL));
@@ -487,6 +486,8 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostBinpacking) { /*lint --e{715}*/
     int s;
 
     int nitems;
+    SCIP_Longint* values;
+    SCIP_Longint* weights;
     SCIP_Longint* capacities;
     int nbins;
     int b;
@@ -508,6 +509,8 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostBinpacking) { /*lint --e{715}*/
     capacities = pricerdata->capacities;
     conss = pricerdata->conss;
     ids = pricerdata->ids;
+    values = pricerdata->values;
+    weights = pricerdata->weights;
     nitems = pricerdata->nitems;
     nbins = pricerdata->nbins;
 
@@ -516,10 +519,11 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostBinpacking) { /*lint --e{715}*/
     // run pricing problem for each bin
     for (b = 0; b < nbins; ++b) {
 
-        assert(SCIPgetDualsolLinear(scip, conss[nitems+b]));
-        dualHallBound += SCIPgetDualsolLinear(scip, conss[nitems+b]);
+        // assert(SCIPgetDualsolLinear(scip, conss[nitems+b])<= 0);
+        // TODO edit if correct objsense
+        dualHallBound -= SCIPgetDualsolLinear(scip, conss[nitems+b]);
 
-        if (b < nbins && capacities[b+1] == capacities[b])
+        if (b < nbins-1 && capacities[b+1] == capacities[b])
             continue;
 
         /* get the remaining time and memory limit */
@@ -594,10 +598,14 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostBinpacking) { /*lint --e{715}*/
                 int nconss;
                 int o;
                 int v;
+                SCIP_Longint totalvalue;
+                SCIP_Longint totalweight;
 
                 SCIPdebug(SCIP_CALL(SCIPprintSol(subscip, sol, NULL, FALSE)));
 
                 nconss = 0;
+                totalvalue = 0.0;
+                totalweight = 0.0;
                 (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "items");
 
                 SCIP_CALL(SCIPallocBufferArray(scip, &consids, nitems));
@@ -614,6 +622,8 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostBinpacking) { /*lint --e{715}*/
                         strcat(name, strtmp);
 
                         consids[nconss] = o;
+                        totalvalue+= values[o];
+                        totalweight += weights[o];
                         nconss++;
                     } else
                         assert(SCIPisFeasEQ(subscip, SCIPgetSolVal(subscip, sol, vars[v]), 0.0));
@@ -624,7 +634,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostBinpacking) { /*lint --e{715}*/
                 SCIP_CALL(SCIPvardataCreateBinpacking(scip, &vardata, consids, nconss));
 
                 /* create variable for a new column with objective function coefficient 0.0 */
-                SCIP_CALL(SCIPcreateVarBinpacking(scip, &var, name, 1.0, FALSE, TRUE, vardata));
+                SCIP_CALL(SCIPcreateVarBinpacking(scip, &var, name, -totalvalue, FALSE, TRUE, vardata));
 
                 /* add the new variable to the pricer store */
                 SCIP_CALL(SCIPaddPricedVar(scip, var, 1.0));
@@ -635,17 +645,19 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostBinpacking) { /*lint --e{715}*/
                  * of x <= 1 in the LP relaxation since this bound constraint would produce a dual variable which might have
                  * a positive reduced cost
                  */
-                SCIP_CALL(SCIPchgVarUbLazy(scip, var, 1.0));
+//                SCIP_CALL(SCIPchgVarLbLazy(scip, var, 0.0));
 
                 /* check which variable are fixed -> which orders belong to this packing */
-                for (v = 0; v < nconss; ++v) {
+                for (v = 0; v < nconss; v++) {
                     assert(SCIPconsIsEnabled(conss[consids[v]]));
                     SCIP_CALL(SCIPaddCoefSetppc(scip, conss[consids[v]], var));
                 }
 
                 /* add variable to hall constraints */
-                for (v = 0; v <= b; ++v) {
+                for (v = 0; v <= b; v++) {
                     SCIP_CALL(SCIPaddCoefLinear(scip, conss[nitems+v], var, 1.0));
+                    if (totalweight <= capacities[v] && v < b && capacities[b] != capacities[b+1])
+                        break;
                 }
 
                 SCIPdebug(SCIPprintVar(scip, var, NULL));
@@ -750,7 +762,7 @@ SCIP_RETCODE SCIPpricerBinpackingActivate(
     pricerdata->nbins = nbins;
 
     //SCIPdebugMessage("   nitems: %d capacity: %"SCIP_LONGINT_FORMAT"  \n", nitems, capacity);
-    SCIPdebugMessage("      # profits    weights   x  \n"); /* capture constraints */
+    SCIPdebugMessage("      # id    weights   x  \n"); /* capture constraints */
 
     /* capture all constraints */
     for (c = 0; c < nitems; ++c) {
