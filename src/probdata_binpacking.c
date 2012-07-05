@@ -372,7 +372,7 @@ SCIP_RETCODE SCIPprobdataCreate(
             probinitsolBinpacking, probexitsolBinpacking, probcopyBinpacking, NULL));
 
     /* set objective sense */
-    SCIP_CALL(SCIPsetObjsense(scip, SCIP_OBJSENSE_MINIMIZE));
+    SCIP_CALL(SCIPsetObjsense(scip, SCIP_OBJSENSE_MAXIMIZE));
 
     /* tell SCIP that the objective will be always integral */
     SCIP_CALL(SCIPsetObjIntegral(scip));

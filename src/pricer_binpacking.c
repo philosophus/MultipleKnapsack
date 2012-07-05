@@ -349,6 +349,7 @@ SCIP_RETCODE initPricing(
 
         /* dual value in original SCIP */
         dual = SCIPgetDualsolSetppc(scip, cons);
+        assert(dual >= 0);
 
         SCIP_CALL(SCIPcreateVar(subscip, &var, SCIPconsGetName(cons), 0.0, 1.0, values[c]-dual,
                 SCIP_VARTYPE_BINARY, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL));
@@ -515,6 +516,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostBinpacking) { /*lint --e{715}*/
     // run pricing problem for each bin
     for (b = 0; b < nbins; ++b) {
 
+        assert(SCIPgetDualsolLinear(scip, conss[nitems+b]));
         dualHallBound += SCIPgetDualsolLinear(scip, conss[nitems+b]);
 
         if (b < nbins && capacities[b+1] == capacities[b])
