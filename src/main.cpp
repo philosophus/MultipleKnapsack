@@ -5,8 +5,6 @@
  * Created on June 29, 2012, 3:42 PM
  */
 
-#define SCIP_DEBUG
-
 #include <cstdlib>
 
 /* scip includes */

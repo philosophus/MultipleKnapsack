@@ -177,7 +177,7 @@ SCIP_RETCODE probdataFree(
     }
 
     /* release all constraints */
-    for (i = 0; i < (*probdata)->nitems; ++i) {
+    for (i = 0; i < (*probdata)->nitems + (*probdata)->nbins; ++i) {
         SCIP_CALL(SCIPreleaseCons(scip, &(*probdata)->conss[i]));
     }
 
