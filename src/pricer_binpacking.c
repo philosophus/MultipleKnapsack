@@ -645,7 +645,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostBinpacking) { /*lint --e{715}*/
                  * of x <= 1 in the LP relaxation since this bound constraint would produce a dual variable which might have
                  * a positive reduced cost
                  */
-//                SCIP_CALL(SCIPchgVarLbLazy(scip, var, 0.0));
+                SCIP_CALL(SCIPchgVarUbLazy(scip, var, 1.0));
 
                 /* check which variable are fixed -> which orders belong to this packing */
                 for (v = 0; v < nconss; v++) {

@@ -182,7 +182,8 @@ SCIP_RETCODE probdataFree(
     }
 
     /* free memory of arrays */
-    SCIPfreeMemoryArray(scip, &(*probdata)->vars);
+    if ((*probdata)->nvars > 0)
+        SCIPfreeMemoryArray(scip, &(*probdata)->vars);
     SCIPfreeMemoryArray(scip, &(*probdata)->conss);
     SCIPfreeMemoryArray(scip, &(*probdata)->weights);
     SCIPfreeMemoryArray(scip, &(*probdata)->ids);
